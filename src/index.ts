@@ -18,9 +18,9 @@ const client = new Client()
 app.get('/', async (req, res) => {
   const stateQuery = req.query.state?.toString() ?? ''
   const state = convertStateIdsToAmoc(stateQuery)
+  const downloader = new Collector({ memoryCache, diskCache, client })
 
   try {
-    const downloader = new Collector({ memoryCache, diskCache, client })
     const data = await downloader.getAllWarns()
 
     const results = data
@@ -33,6 +33,8 @@ app.get('/', async (req, res) => {
     res.status(500).json({
       error: 'Failed to retrieve warning list. Please try again later.',
     })
+  } finally {
+    downloader.close()
   }
 })
 
@@ -52,6 +54,8 @@ app.get('/warning/:id', async (req, res) => {
     res.status(500).json({
       error: `Failed to retrieve or parse warning for region "${amocRegion}". Please try again later.`,
     })
+  } finally {
+    downloader.close()
   }
 })
 

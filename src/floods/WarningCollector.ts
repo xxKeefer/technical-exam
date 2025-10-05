@@ -34,7 +34,7 @@ export class Collector {
     return this.client
   }
 
-  private async close() {
+  async close() {
     if (this.client) {
       this.client.close()
       this.connected = false
@@ -43,12 +43,8 @@ export class Collector {
 
   async getAllWarns(): Promise<string[]> {
     const client = await this.connect()
-    try {
-      const files: FileInfo[] = await client.list()
-      return files.filter((f) => f.name.endsWith('.amoc.xml')).map((f) => f.name)
-    } finally {
-      this.close()
-    }
+    const files: FileInfo[] = await client.list()
+    return files.filter((f) => f.name.endsWith('.amoc.xml')).map((f) => f.name)
   }
 
   async downloadWarning(file: string, ttlMs = 10 * 60 * 1000) {
@@ -79,24 +75,20 @@ export class Collector {
 
     await client.cd('/anon/gen/fwo/')
 
-    try {
-      const chunks: Buffer[] = []
+    const chunks: Buffer[] = []
 
-      const writable = new Writable({
-        write(chunk, _encoding, callback) {
-          chunks.push(Buffer.from(chunk))
-          callback()
-        },
-      })
-      await client.downloadTo(writable, file)
-      const buffer = Buffer.concat(chunks)
-      this.disk.write(file, buffer)
-      const parsed = buffer.toString('utf8')
-      this.cache.set(file, parsed, ttlMs)
-      console.log(`Downloaded ${file}`)
-      return parsed
-    } finally {
-      this.close()
-    }
+    const writable = new Writable({
+      write(chunk, _encoding, callback) {
+        chunks.push(Buffer.from(chunk))
+        callback()
+      },
+    })
+    await client.downloadTo(writable, file)
+    const buffer = Buffer.concat(chunks)
+    this.disk.write(file, buffer)
+    const parsed = buffer.toString('utf8')
+    this.cache.set(file, parsed, ttlMs)
+    console.log(`Downloaded ${file}`)
+    return parsed
   }
 }

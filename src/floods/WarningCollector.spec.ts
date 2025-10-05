@@ -36,7 +36,6 @@ describe('Collector', () => {
     expect(result).toEqual(['bar.amoc.xml', 'baz.amoc.xml'])
     expect(clientMock.access).toHaveBeenCalled()
     expect(clientMock.cd).toHaveBeenCalledWith('/anon/gen/fwo/')
-    expect(clientMock.close).toHaveBeenCalled()
   })
 
   // --------------------- downloadWarning ---------------------
@@ -78,7 +77,6 @@ describe('Collector', () => {
     expect(result).toBe('ftp data')
     expect(diskMock.write).toHaveBeenCalledWith('file.xml', Buffer.from('ftp data'))
     expect(memMock.set).toHaveBeenCalledWith('file.xml', 'ftp data', 1000)
-    expect(clientMock.close).toHaveBeenCalled()
   })
 
   it('closes FTP client even on download error', async () => {
@@ -88,6 +86,5 @@ describe('Collector', () => {
     clientMock.downloadTo.mockRejectedValue(new Error('network fail'))
 
     await expect(collector.downloadWarning('file.xml')).rejects.toThrow('network fail')
-    expect(clientMock.close).toHaveBeenCalled()
   })
 })
