@@ -1,54 +1,60 @@
-import { downloadTo } from "basic-ftp/dist/transfer";
-import express from "express";
-import { convertStateIdsToAmoc } from "./main/convertStateIdsToAmoc";
-import { FloodWarningParser } from "./parser/FloodWarningParser";
-import { WarningColletor, WarningTextCollector } from "./floods/WarningCollector";
-import { getAllWarns } from "./floods/amocWarnings";
+import express from 'express'
+import { convertStateIdsToAmoc } from './main/convertStateIdsToAmoc'
+import { FloodWarningParser } from './parser/FloodWarningParser'
+import { Collector } from './floods/WarningCollector'
+import { MemoryCache } from './services/MemoryCache'
+import { DiskCache } from './services/DiskCache'
+import { Client } from 'basic-ftp'
 
-require("./main/log.ts");
+require('./main/log.ts')
 
-const app = express();
-const port = 3000;
+const app = express()
+const port = 3000
 
-const ERRORMESSAGE = "Something went wrong";
+const memoryCache = new MemoryCache()
+const diskCache = new DiskCache()
+const client = new Client()
 
-app.get("/", async (req, res) => {
+app.get('/', async (req, res) => {
+  const stateQuery = req.query.state?.toString() ?? ''
+  const state = convertStateIdsToAmoc(stateQuery)
+
   try {
-    const data = await getAllWarns();
+    const downloader = new Collector({ memoryCache, diskCache, client })
+    const data = await downloader.getAllWarns()
 
-    const state = convertStateIdsToAmoc(req.query.state?.toString() || "");
+    const results = data
+      .filter((file) => file.startsWith(state))
+      .map((file) => file.replace(/\.amoc\.xml/, ''))
 
-    let results = [];
-    for (let key of data) {
-      if (key.startsWith(state)) {
-        results.push(key.replace(/\.amoc\.xml/, ""));
-      }
-    }
-
-    res.send(results);
+    res.send(results)
   } catch (error) {
-    res.send(ERRORMESSAGE);
+    console.error(`Error fetching warning list for state "${stateQuery}":`, error)
+    res.status(500).json({
+      error: 'Failed to retrieve warning list. Please try again later.',
+    })
   }
-});
+})
 
-app.get("/warning/:id", async (req, res) => {
+app.get('/warning/:id', async (req, res) => {
+  const amocRegion = req.params.id
+  const downloader = new Collector({ memoryCache, diskCache, client })
   try {
-    const downloader = new WarningColletor();
-    const xmlid = req.params.id;
+    const warning = await downloader.downloadWarning(`${amocRegion}.amoc.xml`)
+    const text = await downloader.downloadWarning(`${amocRegion}.txt`)
 
-    const warning = await downloader.downloadWarning(xmlid);
-    const warningParser = new FloodWarningParser(warning);
+    const warningParser = new FloodWarningParser(warning, text)
+    const parsedWarning = await warningParser.getWarning()
 
-    const textDownloader = new WarningTextCollector()
-    const text = await textDownloader.downloadWarning(xmlid);
-
-    res.send({ ...(await warningParser.getWarning()), text: text || "" });
+    res.send(parsedWarning)
   } catch (error) {
-    res.send(ERRORMESSAGE);
-    console.log(error);
+    console.error(`Error fetching or parsing warning "${amocRegion}":`, error)
+    res.status(500).json({
+      error: `Failed to retrieve or parse warning for region "${amocRegion}". Please try again later.`,
+    })
   }
-});
+})
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
-});
+  console.log(`Example app listening at http://localhost:${port}`)
+})
