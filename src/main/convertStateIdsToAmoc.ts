@@ -1,22 +1,24 @@
+// AMOC: Australian Meteorological and Oceanographic Codes
+
 export function convertStateIdsToAmoc(state: string): string {
-  switch (state) {
-    case "NT":
-      return "IDD";
-    case "NSW":
-      return "IDN";
-    case "Qld":
-      return "IDQ";
-    case "SA":
-      return "IDS";
-    case "Tas":
-      return "IDT";
-    case "Vic":
-      return "IDV";
-    case "WA":
-      return "IDW";
-    case "ACT":
-      return "IDN";
+  switch (state.toLocaleLowerCase()) {
+    case 'nt':
+      return 'IDD'
+    case 'nsw':
+      return 'IDN'
+    case 'qld':
+      return 'IDQ'
+    case 'sa':
+      return 'IDS'
+    case 'tas':
+      return 'IDT'
+    case 'vic':
+      return 'IDV'
+    case 'wa':
+      return 'IDW'
+    case 'act':
+      return 'IDN'
   }
 
-  return "unk";
+  return 'unk'
 }
