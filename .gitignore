@@ -2,3 +2,4 @@ node_modules/
 /*.xml
 /*.txt
 *.log
+cache/
